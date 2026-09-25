@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, User, Package, Heart, LogOut, Loader2, BadgeCheck, ChevronRight } from "lucide-react";
+import { LayoutGrid, User, Package, Heart, LogOut, Loader2, BadgeCheck, ChevronRight, MapPin } from "lucide-react";
 import Topbar from "@/components/common/Topbar";
 import MainHeader from "@/components/common/MainHeader";
 import NavBar from "@/components/common/NavBar";
@@ -13,6 +13,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 const nav = [
     { href: "/account", label: "Overview", icon: LayoutGrid },
     { href: "/account/orders", label: "Orders", icon: Package },
+    { href: "/account/addresses", label: "Addresses", icon: MapPin },
     { href: "/wishlist", label: "Wishlist", icon: Heart },
     { href: "/account/profile", label: "Profile & settings", icon: User },
 ];

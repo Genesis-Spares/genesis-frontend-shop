@@ -389,6 +389,8 @@ export interface ApiOrderAddress {
     city: string;
     country: string;
     phone?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 export interface ApiOrder {
@@ -433,6 +435,9 @@ export interface CheckoutBody {
     address: string;
     city: string;
     landmark?: string;
+    /** the drop-off pin (GPS or map) */
+    latitude?: number;
+    longitude?: number;
     paymentMethod: "mpesa" | "cod";
     note?: string;
 }
@@ -476,6 +481,44 @@ export const orderApi = {
         return asList<ApiOrder>(res);
     },
     get: (token: string, id: string) => apiCall<ApiOrder>(`/me/orders/${encodeURIComponent(id)}`, { token }),
+};
+
+// ---------- saved delivery addresses (authenticated) ----------
+export interface SavedAddress {
+    id: string;
+    label: string;
+    line1: string;
+    line2?: string | null;
+    city: string;
+    country: string;
+    phone?: string | null;
+    isDefault: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
+    deliveryInstructions?: string | null;
+}
+
+export interface SavedAddressInput {
+    label: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    country?: string;
+    phone?: string;
+    isDefault?: boolean;
+    latitude?: number;
+    longitude?: number;
+    deliveryInstructions?: string;
+}
+
+export const addressesApi = {
+    list: (token: string) => apiCall<SavedAddress[]>("/customers/me/addresses", { token }),
+    create: (token: string, body: SavedAddressInput) =>
+        apiCall<SavedAddress>("/customers/me/addresses", { method: "POST", body: { country: "Kenya", ...body }, token }),
+    update: (token: string, id: string, body: Partial<SavedAddressInput>) =>
+        apiCall<SavedAddress>(`/customers/me/addresses/${encodeURIComponent(id)}`, { method: "PUT", body, token }),
+    remove: (token: string, id: string) =>
+        apiCall<{ success: boolean }>(`/customers/me/addresses/${encodeURIComponent(id)}`, { method: "DELETE", token }),
 };
 
 // ---------- delivery zones, VAT & quotes (public) ----------
