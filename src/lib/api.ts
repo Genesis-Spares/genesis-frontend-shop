@@ -11,6 +11,12 @@
 export const API_BASE =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:11000/api";
 
+/**
+ * Server-rendered pages may need a different address than browsers (e.g. the
+ * gateway's name inside a Docker network); set API_INTERNAL_URL for that.
+ */
+const SERVER_API_BASE = process.env.API_INTERNAL_URL?.replace(/\/$/, "") || API_BASE;
+
 // ---------- backend shapes ----------
 export interface ApiImage {
     url: string;
@@ -103,7 +109,7 @@ export async function getJSON<T>(
     params?: Record<string, unknown>,
     revalidate = 60,
 ): Promise<T | null> {
-    let url = `${API_BASE}${path}`;
+    let url = `${typeof window === "undefined" ? SERVER_API_BASE : API_BASE}${path}`;
     if (params) {
         const qs = new URLSearchParams();
         for (const [k, v] of Object.entries(params)) {
@@ -395,7 +401,13 @@ export interface ApiOrder {
     subtotal: string | number;
     shippingAmount: string | number;
     discountAmount: string | number;
+    taxAmount?: string | number;
+    taxRate?: string | number | null;
     total: string | number;
+    deliveryZoneName?: string | null;
+    /** unpaid M-Pesa orders are cancelled after this */
+    paymentDueAt?: string | null;
+    payments?: { id: string; status: PaymentView["status"]; amount: string | number; receiptNumber?: string | null; createdAt: string; paidAt?: string | null }[];
     customerNote?: string | null;
     shippingAddress: ApiOrderAddress;
     trackingNumber?: string | null;
@@ -421,20 +433,105 @@ export interface CheckoutBody {
     address: string;
     city: string;
     landmark?: string;
-    deliveryMethod: "same-day" | "courier";
-    paymentMethod: "mpesa" | "card" | "cod";
+    paymentMethod: "mpesa" | "cod";
     note?: string;
 }
 
+/** One M-Pesa prompt, as the shopper sees it. */
+export interface PaymentView {
+    id: string;
+    status: "PENDING" | "SUCCESS" | "FAILED";
+    amount: number;
+    currency: string;
+    phone: string;
+    receiptNumber?: string | null;
+    message?: string | null;
+    createdAt: string;
+    paidAt?: string | null;
+}
+
+export interface PaymentStatus {
+    orderId: string;
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod?: string | null;
+    total: number;
+    paymentDueAt?: string | null;
+    payment: PaymentView | null;
+    canRetry: boolean;
+}
+
 export const orderApi = {
+    /** M-Pesa orders come back PENDING with the prompt just sent in `payment`. */
     place: (token: string, body: CheckoutBody) =>
-        apiCall<ApiOrder>("/me/orders", { method: "POST", body, token }),
+        apiCall<ApiOrder & { payment: PaymentView | null }>("/me/orders", { method: "POST", body, token }),
+    paymentStatus: (token: string, id: string) =>
+        apiCall<PaymentStatus>(`/me/orders/${encodeURIComponent(id)}/payment`, { token }),
+    /** Re-send the M-Pesa prompt, optionally to another phone. */
+    pay: (token: string, id: string, phone?: string) =>
+        apiCall<{ payment: PaymentView | null; paid: boolean }>(`/me/orders/${encodeURIComponent(id)}/pay`, { method: "POST", body: { phone }, token }),
     async list(token: string, page = 1, limit = 20) {
         const res = await apiCall<Paginated<ApiOrder>>(`/me/orders?page=${page}&limit=${limit}`, { token });
         return asList<ApiOrder>(res);
     },
     get: (token: string, id: string) => apiCall<ApiOrder>(`/me/orders/${encodeURIComponent(id)}`, { token }),
 };
+
+// ---------- delivery zones, VAT & quotes (public) ----------
+export interface DeliveryZone {
+    id: string;
+    name: string;
+    description?: string | null;
+    cities: string[];
+    isDefault: boolean;
+    fee: number;
+    perKgFee: number;
+    includedKg: number;
+    freeAbove: number | null;
+    minDays: number;
+    maxDays: number;
+    allowsCod: boolean;
+}
+
+export interface DeliveryZones {
+    vatRate: number;
+    vatOnShipping: boolean;
+    zones: DeliveryZone[];
+}
+
+export interface Quote {
+    zone: { id: string; name: string; minDays: number; maxDays: number; allowsCod: boolean };
+    currency: string;
+    subtotal: number;
+    shipping: number;
+    taxRate: number;
+    taxAmount: number;
+    total: number;
+    weightKg: number;
+    freeDeliveryAbove: number | null;
+    amountToFreeDelivery: number | null;
+}
+
+export const checkoutApi = {
+    zones: () => apiCall<DeliveryZones>("/checkout/delivery-zones"),
+    quote: (city: string, items: { productId: string; quantity: number }[]) =>
+        apiCall<Quote>("/checkout/quote", { method: "POST", body: { city, items } }),
+};
+
+/** "0–1" → "Same day or next business day", "2–4" → "2–4 business days". */
+export function deliveryEta(z: { minDays: number; maxDays: number }) {
+    if (z.maxDays <= 0) return "Same day";
+    if (z.minDays <= 0) return z.maxDays === 1 ? "Same day or next business day" : `Same day – ${z.maxDays} business days`;
+    if (z.minDays === z.maxDays) return `${z.minDays} business day${z.minDays === 1 ? "" : "s"}`;
+    return `${z.minDays}–${z.maxDays} business days`;
+}
+
+/** Every town the zones list, title-cased and sorted — for the town picker. */
+export function townNames(zones: DeliveryZone[]) {
+    const title = (c: string) => c.replace(/\b\w/g, (m) => m.toUpperCase());
+    return [...new Set(zones.flatMap((z) => z.cities))].map(title).sort((a, b) => a.localeCompare(b));
+}
 
 // ---------- cart sync (authenticated) ----------
 export interface ServerCart {

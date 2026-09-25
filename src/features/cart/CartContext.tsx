@@ -125,15 +125,35 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, [ready, authReady, userId]);
 
     // after the merge, push every change (debounced) — PUT replaces the whole cart
+    const pendingPush = useRef(false);
     useEffect(() => {
         if (!userId || syncedFor.current !== userId) return;
         const token = getToken();
         if (!token) return;
+        pendingPush.current = true;
         const t = setTimeout(() => {
-            cartApi.replace(token, items.map((i) => ({ productId: i.id, quantity: Math.min(99, i.qty) }))).catch(() => undefined);
+            cartApi.replace(token, items.map((i) => ({ productId: i.id, quantity: Math.min(99, i.qty) })))
+                .catch(() => undefined)
+                .finally(() => { pendingPush.current = false; });
         }, SYNC_DELAY_MS);
         return () => clearTimeout(t);
     }, [items, userId]);
+
+    // Back on this tab: adopt the saved cart, which another device may have changed —
+    // otherwise this tab's next PUT would overwrite those changes.
+    useEffect(() => {
+        if (!userId) return;
+        const onVisible = () => {
+            if (document.visibilityState !== "visible" || syncedFor.current !== userId || pendingPush.current) return;
+            const token = getToken();
+            if (!token) return;
+            cartApi.get(token)
+                .then((remote) => { if (!pendingPush.current) setItems(fromServer(remote)); })
+                .catch(() => undefined);
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        return () => document.removeEventListener("visibilitychange", onVisible);
+    }, [userId]);
 
     const add = useCallback((item: Omit<CartItem, "qty">, qty = 1) => {
         setItems((cur) => {
