@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 Archive.zip
+
+# env templates are committed
+!.env.example

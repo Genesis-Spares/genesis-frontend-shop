@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // self-contained server in .next/standalone, used by the Dockerfile
+  output: "standalone",
   allowedDevOrigins: ['127.0.0.1'],
   images: {
     // Product images come from the catalog DB and can be hosted anywhere,
