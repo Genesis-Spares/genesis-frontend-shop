@@ -1,22 +1,32 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Minus, Plus, Lock, Truck, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, Loader2, Minus, Plus, Lock, Truck, ShoppingCart } from 'lucide-react'
 import Topbar from '@/components/common/Topbar'
 import MainHeader from '@/components/common/MainHeader'
 import NavBar from '@/components/common/NavBar'
 import Footer from '@/components/common/Footer'
 import { useCart } from '@/features/cart/CartContext'
 import { formatKSh } from '@/libs/utils'
-
-const FREE_DELIVERY_THRESHOLD = 10000
+import { deliveryEta, townNames } from '@/lib/api'
+import { rememberTown, rememberedTown, useDeliveryZones, useQuote } from '@/features/checkout/useQuote'
 
 export default function CartPage() {
     const { items, count, subtotal, setQty, remove, ready } = useCart()
-
-    const freeDelivery = subtotal >= FREE_DELIVERY_THRESHOLD || subtotal === 0
     const empty = ready && items.length === 0
+
+    // delivery + VAT estimate for the shopper's town, priced by the server
+    const [town, setTown] = useState('')
+    useEffect(() => setTown(rememberedTown() || 'Nairobi'), [])
+    const zones = useDeliveryZones()
+    const towns = useMemo(() => townNames(zones?.zones ?? []), [zones])
+    const lines = useMemo(() => items.map((i) => ({ productId: i.id, quantity: i.qty })), [items])
+    const { quote, loading, error } = useQuote(lines, town)
+    useEffect(() => {
+        if (quote) rememberTown(town)
+    }, [quote, town])
 
     return (
         <div className="min-h-screen bg-white">
@@ -127,30 +137,37 @@ export default function CartPage() {
                         <div>
                             <div className="rounded-2xl border border-hairline bg-white p-6">
                                 <div className="font-display mb-5 text-lg font-extrabold text-carbon">Order Summary</div>
+                                <div className="mb-4">
+                                    <label htmlFor="cart-town" className="mb-1.5 block text-[12.5px] font-semibold text-mutedink">Deliver to</label>
+                                    <input id="cart-town" list="cart-towns" value={town} onChange={(e) => setTown(e.target.value)}
+                                        placeholder="Your town" autoComplete="address-level2"
+                                        className="h-11 w-full rounded-lg border border-line-strong bg-surface px-3.5 text-sm outline-none transition placeholder:text-faint focus:border-brand focus:bg-white" />
+                                    <datalist id="cart-towns">
+                                        {towns.map((t) => <option key={t} value={t} />)}
+                                    </datalist>
+                                    {quote && (
+                                        <p className="mt-1.5 text-[12px] text-faint">{quote.zone.name} · {deliveryEta(quote.zone)}</p>
+                                    )}
+                                    {error && <p className="mt-1.5 text-[12px] font-medium text-[#b23b32]">{error}</p>}
+                                </div>
                                 <div className="mb-3 flex justify-between text-sm text-mutedink">
                                     Subtotal
-                                    <span className="font-mono font-semibold text-carbon tnum">{formatKSh(subtotal)}</span>
+                                    <span className="font-mono font-semibold text-carbon tnum">{formatKSh(quote?.subtotal ?? subtotal)}</span>
                                 </div>
                                 <div className="mb-3 flex justify-between text-sm text-mutedink">
-                                    Delivery<span className="font-semibold text-stock">{freeDelivery ? 'Free' : formatKSh(450)}</span>
+                                    Delivery
+                                    <span className={quote?.shipping === 0 ? 'font-semibold text-stock' : 'font-mono font-semibold text-carbon tnum'}>
+                                        {!quote ? '—' : quote.shipping === 0 ? 'Free' : formatKSh(quote.shipping)}
+                                    </span>
                                 </div>
                                 <div className="mb-4 flex justify-between text-sm text-mutedink">
-                                    VAT (16%)<span className="font-semibold text-carbon">Included</span>
-                                </div>
-                                <div className="mb-4 flex h-11 overflow-hidden rounded-lg border border-line-strong">
-                                    <input
-                                        placeholder="Promo code"
-                                        aria-label="Promo code"
-                                        className="flex-1 bg-surface px-3.5 text-sm outline-none placeholder:text-faint"
-                                    />
-                                    <button className="w-20 bg-white text-[13px] font-semibold text-mutedink hover:text-carbon">
-                                        Apply
-                                    </button>
+                                    VAT{quote ? ` (${quote.taxRate}%)` : zones ? ` (${zones.vatRate}%)` : ''}
+                                    <span className="font-mono font-semibold text-carbon tnum">{quote ? formatKSh(quote.taxAmount) : '—'}</span>
                                 </div>
                                 <div className="mb-5 flex items-baseline justify-between border-t border-line pt-4">
                                     <span className="text-base font-bold text-carbon">Total</span>
                                     <span className="font-display text-2xl font-extrabold text-carbon tnum">
-                                        {formatKSh(freeDelivery ? subtotal : subtotal + 450)}
+                                        {loading && !quote ? <Loader2 size={20} className="animate-spin text-faint" /> : quote ? formatKSh(quote.total) : '—'}
                                     </span>
                                 </div>
                                 <Link
@@ -160,15 +177,23 @@ export default function CartPage() {
                                     Proceed to Checkout
                                 </Link>
                                 <div className="mt-3.5 flex items-center justify-center gap-2 text-xs text-faint">
-                                    <Lock size={13} /> Secure checkout · M-Pesa &amp; card
+                                    <Lock size={13} /> Secure checkout · M-Pesa &amp; pay on delivery
                                 </div>
                             </div>
 
-                            {freeDelivery && subtotal > 0 && (
+                            {quote && quote.shipping === 0 && quote.freeDeliveryAbove != null && (
                                 <div className="mt-3.5 flex items-center gap-3 rounded-xl border border-[#c7e8d6] bg-stock-wash px-4 py-3.5">
                                     <Truck size={20} className="shrink-0 text-stock" />
                                     <span className="text-[12.5px] font-medium text-stock">
                                         Free delivery unlocked on this order
+                                    </span>
+                                </div>
+                            )}
+                            {quote?.amountToFreeDelivery != null && (
+                                <div className="mt-3.5 flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
+                                    <Truck size={20} className="shrink-0 text-mutedink" />
+                                    <span className="text-[12.5px] font-medium text-mutedink">
+                                        Add {formatKSh(quote.amountToFreeDelivery)} more for free delivery to {town.trim()}
                                     </span>
                                 </div>
                             )}

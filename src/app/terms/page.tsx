@@ -62,9 +62,9 @@ export default function Page() {
                     title: "Prices and payment",
                     body: (
                         <ul>
-                            <li>Prices are in Kenya Shillings (KSh) and include VAT where applicable. Delivery fees are shown at checkout before you pay.</li>
+                            <li>Prices are in Kenya Shillings (KSh) and exclude VAT. VAT at the applicable rate is added at checkout, together with the delivery fee for your town, and the full total is shown before you pay.</li>
                             <li>The price you pay is the price shown when you place the order. If a price is obviously wrong, we&apos;ll contact you before dispatch and you can cancel for a full refund.</li>
-                            <li>We accept M-Pesa, debit and credit cards, and pay-on-delivery where offered. Card and M-Pesa payments are handled by our payment providers; we never see or store your full card details or M-Pesa PIN.</li>
+                            <li>We accept M-Pesa, and pay-on-delivery where offered. M-Pesa payments are handled by Safaricom; we never see or store your M-Pesa PIN. An order paid by M-Pesa is confirmed once the payment is received, and is cancelled if it isn&apos;t paid within the time shown at checkout.</li>
                         </ul>
                     ),
                 },

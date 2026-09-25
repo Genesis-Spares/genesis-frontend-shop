@@ -10,6 +10,7 @@ import { getToken } from "@/features/auth/token";
 import { AuthError } from "@/features/auth/AuthFields";
 import { cardCls } from "./AccountShell";
 import OrderReturns from "./OrderReturns";
+import MpesaPayment from "@/features/checkout/MpesaPayment";
 import {
     StatusBadge, PaymentLabel, PAYMENT_METHOD_LABEL, TRACK_STEPS, money, orderDate, statusLabel,
 } from "./orderStatus";
@@ -49,13 +50,16 @@ export default function OrderDetail() {
     }
 
     const addr = order.shippingAddress;
-    const delivery = order.customerNote?.match(/^Delivery: ([^—]+)/)?.[1]?.trim();
+    // older orders recorded the delivery option in the note
+    const delivery = order.deliveryZoneName ?? order.customerNote?.match(/^Delivery: ([^—]+)/)?.[1]?.trim();
+    const awaitingPayment = order.paymentMethod === "mpesa" && order.status === "PENDING" && order.paymentStatus !== "PAID";
+    const receipt = order.payments?.find((p) => p.status === "SUCCESS")?.receiptNumber;
 
     return (
         <div className="animate-in fade-in duration-300">
             {back}
 
-            {justPlaced && (
+            {justPlaced && !awaitingPayment && (
                 <div className="mb-6 flex items-start gap-4 rounded-2xl border border-[#cfe9dc] bg-stock-wash p-5">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-stock">
                         <CheckCircle2 size={24} />
@@ -80,6 +84,13 @@ export default function OrderDetail() {
                 </div>
                 <span className="font-mono text-2xl font-semibold text-carbon">{money(order.total)}</span>
             </div>
+
+            {awaitingPayment && (
+                <div className={`${cardCls} mb-6 px-6 py-7`}>
+                    <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-wide text-faint">Complete your payment</p>
+                    <MpesaPayment orderId={order.id} defaultPhone={addr.phone} onPaid={() => setReloadKey((k) => k + 1)} />
+                </div>
+            )}
 
             <Tracker status={order.status} />
 
@@ -133,6 +144,11 @@ export default function OrderDetail() {
                                 {Number(order.shippingAmount) === 0 ? "Free" : money(order.shippingAmount)}
                             </dd>
                         </div>
+                        {Number(order.taxAmount ?? 0) > 0 && (
+                            <div className="flex justify-between text-mutedink">
+                                <dt>VAT{order.taxRate != null ? ` (${Number(order.taxRate)}%)` : ""}</dt><dd className="font-mono">{money(order.taxAmount)}</dd>
+                            </div>
+                        )}
                         {Number(order.discountAmount) > 0 && (
                             <div className="flex justify-between text-mutedink"><dt>Discount</dt><dd className="font-mono">−{money(order.discountAmount)}</dd></div>
                         )}
@@ -158,7 +174,9 @@ export default function OrderDetail() {
                     <InfoCard icon={CreditCard} title="Payment">
                         <div className="flex justify-between"><span>Method</span><span className="font-semibold text-carbon">{PAYMENT_METHOD_LABEL[order.paymentMethod ?? ""] ?? "—"}</span></div>
                         <div className="mt-1.5 flex justify-between"><span>Status</span><PaymentLabel status={order.paymentStatus} /></div>
-                        <p className="mt-3 text-[11.5px] text-faint">Demo store — payments are simulated.</p>
+                        {receipt && (
+                            <div className="mt-1.5 flex justify-between"><span>M-Pesa receipt</span><span className="font-mono font-semibold text-carbon">{receipt}</span></div>
+                        )}
                     </InfoCard>
 
                     <Link href={`/contact-us?topic=${encodeURIComponent("Order / delivery")}&order=${encodeURIComponent(order.orderNumber)}`}
