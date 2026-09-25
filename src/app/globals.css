@@ -1,0 +1,184 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ===========================================================
+   GENESIS INVESTMENT — TORQUE design system
+   Carbon + orange professional auto-parts theme.
+   Type: Archivo (display) / IBM Plex Sans (body) / IBM Plex Mono (numerics)
+   =========================================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Typography */
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-archivo), var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-plex-sans), sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* TORQUE brand palette (utility colors: bg-carbon, text-brand, border-line, …) */
+  --color-carbon: #14161c;
+  --color-carbon-soft: #1d2027;
+  --color-ink: #14161c;
+  --color-brand: #e4531f;
+  --color-brand-hover: #cf491a;
+  --color-brand-ink: #c0430f;
+  --color-brand-wash: #fdf0e9;
+  --color-surface: #f6f7f9;
+  --color-surface-2: #f0f2f6;
+  --color-line: #eaecf1;
+  --color-line-strong: #dcdfe6;
+  --color-hairline: #e6e9ef;
+  --color-mutedink: #5e6773;
+  --color-faint: #8a93a0;
+  --color-stock: #0c7a54;
+  --color-stock-wash: #e9f6ef;
+
+  /* shadcn token bridges */
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #14161c;
+  --card: #ffffff;
+  --card-foreground: #14161c;
+  --popover: #ffffff;
+  --popover-foreground: #14161c;
+
+  /* primary = carbon, so shadcn defaults read as the TORQUE dark */
+  --primary: #14161c;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f0f2f6;
+  --secondary-foreground: #14161c;
+  --muted: #f6f7f9;
+  --muted-foreground: #5e6773;
+
+  /* keep shadcn --accent subtle (used for ghost/outline hover) */
+  --accent: #f0f2f6;
+  --accent-foreground: #14161c;
+
+  --destructive: #c0443b;
+  --border: #eaecf1;
+  --input: #dcdfe6;
+  /* focus ring = brand orange */
+  --ring: #e4531f;
+
+  --chart-1: #e4531f;
+  --chart-2: #14161c;
+  --chart-3: #5e6773;
+  --chart-4: #0c7a54;
+  --chart-5: #2c6ecb;
+
+  --radius: 0.75rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #14161c;
+  --sidebar-primary: #14161c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f2f6;
+  --sidebar-accent-foreground: #14161c;
+  --sidebar-border: #eaecf1;
+  --sidebar-ring: #e4531f;
+}
+
+.dark {
+  --background: #14161c;
+  --foreground: #f4f5f7;
+  --card: #1d2027;
+  --card-foreground: #f4f5f7;
+  --popover: #1d2027;
+  --popover-foreground: #f4f5f7;
+  --primary: #f4f5f7;
+  --primary-foreground: #14161c;
+  --secondary: #262a33;
+  --secondary-foreground: #f4f5f7;
+  --muted: #262a33;
+  --muted-foreground: #9ba3af;
+  --accent: #262a33;
+  --accent-foreground: #f4f5f7;
+  --destructive: #e5645b;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #e4531f;
+  --chart-1: #e4531f;
+  --chart-2: #f4f5f7;
+  --chart-3: #9ba3af;
+  --chart-4: #2fae7f;
+  --chart-5: #5b93e0;
+  --sidebar: #1d2027;
+  --sidebar-foreground: #f4f5f7;
+  --sidebar-primary: #e4531f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #262a33;
+  --sidebar-accent-foreground: #f4f5f7;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #e4531f;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04";
+  }
+  html {
+    @apply font-sans;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* TORQUE eyebrow label (in components layer so text-* utilities can override the color) */
+@layer components {
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #c0430f;
+  }
+}
