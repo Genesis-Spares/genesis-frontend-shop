@@ -11,6 +11,7 @@ import { AuthError } from "@/features/auth/AuthFields";
 import { cardCls } from "./AccountShell";
 import OrderReturns from "./OrderReturns";
 import MpesaPayment from "@/features/checkout/MpesaPayment";
+import { mapsLink } from "@/lib/maps";
 import {
     StatusBadge, PaymentLabel, PAYMENT_METHOD_LABEL, TRACK_STEPS, money, orderDate, statusLabel,
 } from "./orderStatus";
@@ -165,6 +166,12 @@ export default function OrderDetail() {
                         {addr.line2 && <p>Near {addr.line2}</p>}
                         <p>{addr.city}, {addr.country}</p>
                         {addr.phone && <p className="mt-2 inline-flex items-center gap-1.5"><Phone size={13} /> {addr.phone}</p>}
+                        {addr.latitude != null && addr.longitude != null && (
+                            <a href={mapsLink({ lat: addr.latitude, lng: addr.longitude })} target="_blank" rel="noreferrer"
+                                className="mt-1 flex items-center gap-1.5 text-[12.5px] font-medium text-stock underline underline-offset-2">
+                                <MapPin size={13} /> Pinned delivery spot
+                            </a>
+                        )}
                         {delivery && <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-[12.5px] font-medium text-carbon">{delivery}</p>}
                         {order.trackingNumber && (
                             <p className="mt-2 text-[12.5px]">Tracking: <span className="font-mono font-semibold text-carbon">{order.trackingCarrier} {order.trackingNumber}</span></p>

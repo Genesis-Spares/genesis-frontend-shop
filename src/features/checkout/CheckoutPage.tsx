@@ -15,6 +15,10 @@ import { deliveryEta, orderApi, townNames, type CheckoutBody, type PaymentView }
 import { formatKSh } from '@/libs/utils'
 import MpesaPayment from './MpesaPayment'
 import { rememberTown, rememberedTown, useDeliveryZones, useQuote } from './useQuote'
+import AddressFields, { emptyAddress, type AddressValue } from '@/features/location/AddressFields'
+import { useSavedAddresses } from '@/features/location/useSavedAddresses'
+import { addressesApi, type SavedAddress } from '@/lib/api'
+import { mapsLink } from '@/lib/maps'
 
 type PayId = CheckoutBody['paymentMethod']
 
@@ -35,7 +39,13 @@ export default function CheckoutPage() {
     const { items, subtotal, clear, ready: cartReady } = useCart()
 
     const [pay, setPay] = useState<PayId>('mpesa')
-    const [form, setForm] = useState({ fullName: '', phone: '', address: '', city: '', landmark: '' })
+    const [form, setForm] = useState({ fullName: '', phone: '' })
+    const [addr, setAddr] = useState<AddressValue>(emptyAddress)
+    // which saved address is being delivered to, or 'new' for one typed / pinned here
+    const [savedId, setSavedId] = useState<string | null>(null)
+    const [saveNew, setSaveNew] = useState(true)
+    const [saveLabel, setSaveLabel] = useState('')
+    const { addresses } = useSavedAddresses()
     const [mpesaPhone, setMpesaPhone] = useState('')
     const [phase, setPhase] = useState<Phase>('idle')
     const [error, setError] = useState<string | null>(null)
@@ -44,7 +54,7 @@ export default function CheckoutPage() {
     const zones = useDeliveryZones()
     const towns = useMemo(() => townNames(zones?.zones ?? []), [zones])
     const lines = useMemo(() => items.map((i) => ({ productId: i.id, quantity: i.qty })), [items])
-    const { quote, loading: quoting, error: quoteError } = useQuote(lines, form.city)
+    const { quote, loading: quoting, error: quoteError } = useQuote(lines, addr.city)
 
     // checkout needs an account so the order lands in "My orders"
     useEffect(() => {
@@ -58,11 +68,36 @@ export default function CheckoutPage() {
         setForm((f) => ({ ...f, fullName: f.fullName || name, phone: f.phone || user.phone || '' }))
     }, [user])
 
-    // the town the shopper priced on the cart page
-    useEffect(() => {
-        const town = rememberedTown()
-        if (town) setForm((f) => (f.city ? f : { ...f, city: town }))
-    }, [])
+    // Start from the default saved address, else a new one in the town priced on the cart page.
+    // Done while rendering (not in an effect) the first time the addresses arrive.
+    if (addresses !== null && savedId === null) {
+        if (addresses.length) {
+            chooseSaved(addresses[0])
+        } else {
+            setSavedId('new')
+            const town = rememberedTown()
+            if (town && !addr.city) setAddr({ ...addr, city: town })
+        }
+    }
+
+    function chooseSaved(a: SavedAddress) {
+        setSavedId(a.id)
+        setAddr({
+            line1: a.line1,
+            landmark: a.line2 ?? '',
+            city: a.city,
+            pin: a.latitude != null && a.longitude != null ? { lat: a.latitude, lng: a.longitude } : null,
+        })
+        if (a.phone) setForm((f) => ({ ...f, phone: f.phone || a.phone || '' }))
+    }
+
+    const startNew = (from?: AddressValue) => {
+        setSavedId('new')
+        setAddr(from ?? { ...emptyAddress, city: addr.city })
+        const used = new Set((addresses ?? []).map((a) => a.label.toLowerCase()))
+        setSaveLabel(['Home', 'Work'].find((l) => !used.has(l.toLowerCase())) ?? `Address ${(addresses?.length ?? 0) + 1}`)
+    }
+    const isNew = savedId === 'new'
 
     // pay on delivery only where the delivery zone allows it
     const codAllowed = !!quote?.zone.allowsCod
@@ -72,6 +107,19 @@ export default function CheckoutPage() {
 
     const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setForm((f) => ({ ...f, [k]: e.target.value }))
+
+    // remember a new address for next time — never block the order on it
+    const saveAddress = async (token: string) => {
+        if (!isNew || !saveNew || !saveLabel.trim()) return
+        await addressesApi.create(token, {
+            label: saveLabel.trim(),
+            line1: addr.line1.trim(),
+            line2: addr.landmark.trim() || undefined,
+            city: addr.city.trim(),
+            phone: form.phone.trim() || undefined,
+            ...(addr.pin ? { latitude: addr.pin.lat, longitude: addr.pin.lng } : {}),
+        }).catch(() => undefined)
+    }
 
     const payPhone = mpesaPhone || form.phone
     const pricesChanged = !!quote && Math.abs(quote.subtotal - subtotal) >= 1
@@ -95,12 +143,14 @@ export default function CheckoutPage() {
                 items: lines,
                 fullName: form.fullName,
                 phone: pay === 'mpesa' ? payPhone : form.phone,
-                address: form.address,
-                city: form.city,
-                landmark: form.landmark || undefined,
+                address: addr.line1,
+                city: addr.city,
+                landmark: addr.landmark || undefined,
+                ...(addr.pin ? { latitude: addr.pin.lat, longitude: addr.pin.lng } : {}),
                 paymentMethod: pay,
             })
-            rememberTown(form.city)
+            rememberTown(addr.city)
+            await saveAddress(token)
             // the order now holds the parts (and the server cart is emptied), even while payment is pending
             clear()
             if (order.paymentMethod === 'mpesa' && order.paymentStatus !== 'PAID') {
@@ -166,36 +216,65 @@ export default function CheckoutPage() {
                                         onChange={set('phone')} placeholder="0712 345 678" />
                                 </div>
                             </div>
-                            <div className="mb-4">
-                                <label className={labelCls} htmlFor="ad">Delivery address</label>
-                                <input id="ad" required autoComplete="street-address" className={fieldCls} value={form.address}
-                                    onChange={set('address')} placeholder="Estate, street, building / house no." />
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className={labelCls} htmlFor="ct">City / Town</label>
-                                    <input id="ct" required autoComplete="address-level2" list="genesis-towns" className={fieldCls} value={form.city}
-                                        onChange={set('city')} placeholder="e.g. Nairobi, Nakuru, Mombasa" />
-                                    <datalist id="genesis-towns">
-                                        {towns.map((t) => <option key={t} value={t} />)}
-                                    </datalist>
+
+                            {!!addresses?.length && (
+                                <div className="mb-5">
+                                    <div className={labelCls}>Deliver to</div>
+                                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                                        {addresses.map((a) => (
+                                            <button key={a.id} type="button" onClick={() => chooseSaved(a)} aria-pressed={savedId === a.id}
+                                                className={`rounded-xl border px-4 py-3 text-left transition ${savedId === a.id ? 'border-[1.5px] border-brand bg-brand-wash' : 'border-line-strong hover:border-[#c9cdd6]'}`}>
+                                                <span className="flex items-center gap-2 text-[13.5px] font-semibold text-carbon">
+                                                    {a.label}
+                                                    {a.isDefault && <span className="rounded bg-white px-1.5 py-0.5 text-[10.5px] font-semibold text-faint">Default</span>}
+                                                    {a.latitude != null && <MapPin size={13} className="text-stock" aria-label="Pinned on map" />}
+                                                </span>
+                                                <span className="mt-0.5 block truncate text-[12.5px] text-mutedink">{a.line1}{a.line2 ? `, near ${a.line2}` : ''}</span>
+                                                <span className="block text-[12.5px] text-faint">{a.city}</span>
+                                            </button>
+                                        ))}
+                                        <button type="button" onClick={() => startNew()} aria-pressed={isNew}
+                                            className={`rounded-xl border border-dashed px-4 py-3 text-left text-[13.5px] font-semibold transition ${isNew ? 'border-[1.5px] border-solid border-brand bg-brand-wash text-carbon' : 'border-line-strong text-mutedink hover:text-carbon'}`}>
+                                            + New address
+                                            <span className="mt-0.5 block text-[12.5px] font-normal text-faint">Use your location, pin it on the map or type it</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className={labelCls} htmlFor="lm">Nearest landmark <span className="font-normal text-faint">(optional)</span></label>
-                                    <input id="lm" className={fieldCls} value={form.landmark} onChange={set('landmark')} placeholder="e.g. Yaya Centre" />
+                            )}
+
+                            {isNew ? (
+                                <>
+                                    <AddressFields value={addr} onChange={setAddr} towns={towns} idPrefix="co" />
+                                    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-surface px-4 py-3">
+                                        <label className="flex items-center gap-2 text-[13px] font-medium text-carbon">
+                                            <input type="checkbox" checked={saveNew} onChange={(e) => setSaveNew(e.target.checked)} className="h-4 w-4 accent-brand" />
+                                            Save this address as
+                                        </label>
+                                        <input aria-label="Address name" value={saveLabel} onChange={(e) => setSaveLabel(e.target.value)} disabled={!saveNew} maxLength={40}
+                                            placeholder="Home" className="h-9 w-40 rounded-lg border border-line-strong bg-white px-3 text-[13px] outline-none focus:border-brand disabled:opacity-50" />
+                                    </div>
+                                </>
+                            ) : savedId && (
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]">
+                                    {addr.pin && (
+                                        <a href={mapsLink(addr.pin)} target="_blank" rel="noreferrer" className="font-medium text-stock underline underline-offset-2">Pinned location</a>
+                                    )}
+                                    <button type="button" onClick={() => startNew({ ...addr })} className="font-semibold text-brand-ink underline underline-offset-2">
+                                        Change this address for this order
+                                    </button>
                                 </div>
-                            </div>
+                            )}
                         </section>
 
                         {/* delivery — priced from the town */}
                         <section className="mb-4 rounded-2xl border border-hairline bg-white p-6">
                             <div className="font-display mb-4 text-lg font-extrabold text-carbon">Delivery</div>
-                            {form.city.trim().length < 2 ? (
+                            {addr.city.trim().length < 2 ? (
                                 <p className="flex items-center gap-2 text-[13px] text-faint"><MapPin size={15} /> Enter your town above to see delivery options and fees.</p>
                             ) : quoteError ? (
                                 <p className="text-[13px] font-medium text-[#b23b32]">{quoteError}</p>
                             ) : !quote ? (
-                                <p className="flex items-center gap-2 text-[13px] text-faint"><Loader2 size={15} className="animate-spin" /> Checking delivery to {form.city.trim()}…</p>
+                                <p className="flex items-center gap-2 text-[13px] text-faint"><Loader2 size={15} className="animate-spin" /> Checking delivery to {addr.city.trim()}…</p>
                             ) : (
                                 <div className="flex items-center gap-3.5 rounded-xl border-[1.5px] border-brand bg-brand-wash px-4 py-3.5">
                                     <Truck size={20} className="shrink-0 text-brand" />
@@ -212,7 +291,7 @@ export default function CheckoutPage() {
                             )}
                             {quote?.amountToFreeDelivery != null && (
                                 <p className="mt-3 text-[12.5px] text-mutedink">
-                                    Add <span className="font-semibold text-carbon">{formatKSh(quote.amountToFreeDelivery)}</span> more for free delivery to {form.city.trim()}.
+                                    Add <span className="font-semibold text-carbon">{formatKSh(quote.amountToFreeDelivery)}</span> more for free delivery to {addr.city.trim()}.
                                 </p>
                             )}
                         </section>
