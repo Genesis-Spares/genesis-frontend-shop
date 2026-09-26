@@ -4,6 +4,18 @@ const nextConfig: NextConfig = {
   // self-contained server in .next/standalone, used by the Dockerfile
   output: "standalone",
   allowedDevOrigins: ['127.0.0.1'],
+  // the service worker must always be re-checked so shop updates reach installed apps
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
   images: {
     // Product images come from the catalog DB and can be hosted anywhere,
     // so allow any remote host. `unoptimized` avoids the optimizer needing

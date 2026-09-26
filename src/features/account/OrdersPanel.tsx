@@ -105,7 +105,7 @@ function OrderRow({ order: o }: { order: ApiOrder }) {
                 <ChevronRight size={18} className="ml-auto text-line-strong transition group-hover:translate-x-0.5 group-hover:text-brand" />
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 max-w-full items-center gap-3">
                     <div className="flex -space-x-2">
                         {o.items.slice(0, 3).map((i) => (
                             <span key={i.id} className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border-2 border-white bg-surface">
@@ -121,7 +121,7 @@ function OrderRow({ order: o }: { order: ApiOrder }) {
                         )}
                     </div>
                     <div className="min-w-0">
-                        <p className="max-w-[320px] truncate text-[13.5px] font-medium text-carbon">
+                        <p className="truncate sm:max-w-[320px] text-[13.5px] font-medium text-carbon">
                             {o.items[0]?.name}{o.items.length > 1 ? ` and ${o.items.length - 1} more` : ""}
                         </p>
                         <p className="text-[12.5px] text-faint">

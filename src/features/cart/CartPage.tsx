@@ -65,9 +65,9 @@ export default function CartPage() {
                             {items.map((l) => (
                                 <div
                                     key={l.id}
-                                    className="mb-4 flex items-center gap-4 rounded-2xl border border-hairline bg-white p-4 sm:p-5"
+                                    className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-hairline bg-white p-4 sm:flex-nowrap sm:p-5"
                                 >
-                                    <Link href={`/products/${l.slug}`} className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface">
+                                    <Link href={`/products/${l.slug}`} className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface sm:h-24 sm:w-24">
                                         {l.image ? (
                                             <Image src={l.image} alt={l.name} width={96} height={96} className="h-full w-full object-contain p-2" />
                                         ) : (
@@ -93,6 +93,7 @@ export default function CartPage() {
                                             </div>
                                         )}
                                     </div>
+                                    <div className="flex w-full items-center justify-between gap-4 border-t border-hairline pt-3 sm:w-auto sm:border-0 sm:pt-0">
                                     <div className="flex items-center overflow-hidden rounded-lg border border-line-strong">
                                         <button
                                             onClick={() => setQty(l.id, l.qty - 1)}
@@ -111,7 +112,7 @@ export default function CartPage() {
                                             <Plus size={14} />
                                         </button>
                                     </div>
-                                    <div className="w-28 text-right">
+                                    <div className="text-right sm:w-28">
                                         <div className="font-display text-[17px] font-extrabold text-carbon tnum">
                                             {formatKSh(l.price * l.qty)}
                                         </div>
@@ -121,6 +122,7 @@ export default function CartPage() {
                                         >
                                             Remove
                                         </button>
+                                    </div>
                                     </div>
                                 </div>
                             ))}

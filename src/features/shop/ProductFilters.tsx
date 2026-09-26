@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronUp, SlidersHorizontal, X } from "lucide-react";
 import type { ApiCategory } from "@/lib/api";
 
 const BRANDS = ["Bosch", "TRW", "NGK", "Denso", "KYB", "Mann"];
@@ -17,11 +17,76 @@ interface Props {
     onChange: (updates: Record<string, string | undefined>) => void;
 }
 
-export default function ProductFilters({ categories, active, onChange }: Props) {
+/**
+ * Sidebar on desktop. Below lg it collapses into a "Filters" button that opens a
+ * slide-over sheet, so phones see products straight away instead of a long filter list.
+ */
+export default function ProductFilters(props: Props) {
+    const [open, setOpen] = useState(false);
+    const { active } = props;
+    const count = [active.categoryId, active.brand, active.inStock, active.maxPrice].filter(Boolean).length;
+
+    useEffect(() => {
+        if (!open) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+        window.addEventListener("keydown", onKey);
+        return () => {
+            document.body.style.overflow = prev;
+            window.removeEventListener("keydown", onKey);
+        };
+    }, [open]);
+
+    return (
+        <>
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-line-strong bg-white text-sm font-semibold text-carbon transition hover:border-brand lg:hidden"
+            >
+                <SlidersHorizontal size={16} /> Filters
+                {count > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">{count}</span>
+                )}
+            </button>
+
+            <div className="hidden lg:block">
+                <FilterPanel {...props} />
+            </div>
+
+            {open && (
+                <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+                    <div className="absolute inset-0 bg-carbon/50" onClick={() => setOpen(false)} />
+                    <div className="absolute inset-y-0 right-0 flex w-[88%] max-w-sm flex-col bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+                            <h2 className="font-display text-lg font-extrabold text-carbon">Filters</h2>
+                            <button type="button" onClick={() => setOpen(false)} aria-label="Close filters"
+                                className="flex h-9 w-9 items-center justify-center rounded-lg text-mutedink hover:bg-surface hover:text-carbon">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto overscroll-contain">
+                            <FilterPanel {...props} flat />
+                        </div>
+                        <div className="border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button type="button" onClick={() => setOpen(false)}
+                                className="h-12 w-full rounded-lg bg-carbon text-sm font-semibold text-white">
+                                Show results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
+function FilterPanel({ categories, active, onChange, flat }: Props & { flat?: boolean }) {
     const [price, setPrice] = useState(active.maxPrice ?? 50000);
 
     return (
-        <aside className="h-fit overflow-hidden rounded-2xl border border-hairline bg-white">
+        <aside className={flat ? "" : "h-fit overflow-hidden rounded-2xl border border-hairline bg-white"}>
             <FilterSection title="CATEGORIES">
                 {categories.length === 0 && (
                     <p className="text-[13px] text-faint">No categories available.</p>
