@@ -27,7 +27,7 @@ export default function WishlistPage() {
                 </h1>
 
                 {!ready ? (
-                    <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+                    <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-3 lg:grid-cols-4">
                         {Array.from({ length: 4 }).map((_, i) => (
                             <div key={i} className="h-72 animate-pulse rounded-[14px] border border-hairline bg-surface" />
                         ))}
@@ -60,7 +60,7 @@ export default function WishlistPage() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+                    <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-3 lg:grid-cols-4">
                         {items.map((p) => (
                             <ProductCard key={p.id} product={p} />
                         ))}

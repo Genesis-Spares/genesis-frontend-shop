@@ -86,7 +86,7 @@ export default function ProductsPage({ products, meta, categories, query }: Prop
 
                 <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <h1 className="font-display text-3xl font-extrabold tracking-[-0.02em] text-carbon">
+                        <h1 className="font-display text-2xl font-extrabold sm:text-3xl tracking-[-0.02em] text-carbon">
                             {query.search ? <>Results for &ldquo;{query.search}&rdquo;</> : "Shop All Parts"}
                         </h1>
                         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-faint">
@@ -122,7 +122,7 @@ export default function ProductsPage({ products, meta, categories, query }: Prop
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr] lg:gap-8">
                     <ProductFilters
                         categories={categories}
                         active={{
@@ -142,7 +142,7 @@ export default function ProductsPage({ products, meta, categories, query }: Prop
                                 <p className="mt-1 text-sm text-faint">Try clearing filters or a different search.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-4">
                                 {list.map((product) => (
                                     <ProductCard key={product.id || product.sku} product={product} />
                                 ))}

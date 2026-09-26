@@ -118,11 +118,11 @@ export default function Hero() {
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-4 mt-9">
-                        <button className="bg-brand hover:bg-brand-hover transition-colors text-white font-semibold px-6 py-3.5 rounded-xl flex items-center gap-2">
+                    <div className="flex items-center gap-3 sm:gap-4 mt-9">
+                        <button className="bg-brand hover:bg-brand-hover transition-colors text-white font-semibold px-5 sm:px-6 py-3.5 rounded-xl flex items-center justify-center gap-2 whitespace-nowrap">
                             SHOP NOW <ArrowRight size={16} />
                         </button>
-                        <button className="border border-white/25 hover:border-white/50 transition-colors text-white font-semibold px-6 py-3.5 rounded-xl">
+                        <button className="border border-white/25 hover:border-white/50 transition-colors text-white font-semibold px-5 sm:px-6 py-3.5 rounded-xl whitespace-nowrap">
                             Browse Categories
                         </button>
                     </div>
